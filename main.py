@@ -1,15 +1,16 @@
 import json
 from http import HTTPStatus
 
-
 import uvicorn
 from fastapi import FastAPI, HTTPException
-
-from models.AppStatus import AppStatus
+from fastapi_pagination import Page, paginate, add_pagination
+from models.app_status import AppStatus
 from models.User import User
 
 app = FastAPI()
+add_pagination(app)  # add pagination to your app
 
+# load file to memory
 users: list[User] = []
 
 
@@ -27,18 +28,18 @@ def get_user(user_id: int) -> User:
     return users[user_id - 1]
 
 
-@app.get("/api/users/", status_code=HTTPStatus.OK)
-def get_users() -> list[User]:
-    return users
+@app.get("/api/users/", response_model=Page[User])
+def get_users() -> Page[User]:
+    return paginate(users)
 
 
 if __name__ == "__main__":
+    # read file from memory
     with open("users.json") as f:
         users = json.load(f)
-
+    # validation dates in file
     for user in users:
         User.model_validate(user)
-
     print("Users loaded")
-
+    # start server
     uvicorn.run(app, host="localhost", port=8002)
